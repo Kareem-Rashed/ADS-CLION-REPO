@@ -18,6 +18,8 @@ int main()
 
     if(choice == 1)
     {
+        cout<<"Make sure file contains no numbers "<<endl;
+
         cout<<"Enter the file name: ";
         string filename;
         cin>>filename;
