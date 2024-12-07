@@ -11,6 +11,11 @@ Huffman::~Huffman()
 
 void Huffman::Frequencies(string file)
 {
+    /*
+     *This function takes in the file to be compressed and records the frequencies of each character
+     by adding it to a map when encountering a char for the first time then incrementing the count every
+     other time encountered
+     */
     ifstream infile(file);
     if (!infile.is_open()) {
         cerr << "Error: Unable to open file."<< endl;
@@ -47,18 +52,25 @@ void Huffman::Frequencies(string file)
     cout<<"total: "<<total<<endl;
     */
 
+    //this was used to test frequencies
+
 
     for (auto& it : freqmap)
     {
         pq.insert(it.first, it.second);
     }
+    //adding to priority queue
 
 
 }
 
 void Huffman::buildHuffmanTree()
 {
-
+/*
+ Here we follow the principle rules of huffman trees, we dequeue the two elements with the least frequencies
+ then join them to a parent intenral node, then insert the new parent node back into the priority qurur
+ it loops this until there only remains the parent node of the tree, which is assigned to "root"
+ */
     while(pq.size>1)
     {
         Node<char> *FirstNode = pq.dequeue();
@@ -76,6 +88,10 @@ void Huffman::buildHuffmanTree()
 
 void Huffman::CreateEncodings(Node<char>* temproot, string enc)
 {
+    /*
+     This is a recursive function that loops through all the leaf nodes and assigns them the
+     correct binary code by adding "1" whenever we go right and a "0" whenever we go left
+     */
     if((temproot->left == nullptr)&&(temproot->right == nullptr))
     {
         vector<bool> newVector;
@@ -103,6 +119,10 @@ void Huffman::CreateEncodings(Node<char>* temproot, string enc)
 
 void Huffman::EncodeTreeNormal(string file)
 {
+    /*
+     This function simply writes down the frequencies in order of the priority queue used during
+     creating the tree to create the same exact tree when decompressing
+     */
     ofstream outfile(file);
 
     Node<char>* temproot = pq.root;
@@ -127,8 +147,14 @@ void Huffman::EncodeTreeNormal(string file)
 }
 void Huffman::EncodeTreeCaeser(string file)
 {
+
+    /*
+     This function simply writes down the frequencies in order of the priority queue used during
+     creating the tree to create the same exact tree when decompressing but uses a caeser cypher method
+     of encryption by shifting the characters by a fixed amount encoded at the beginning of the file
+     */
     ofstream outfile(file);
-    int randcypher = rand() % 9 + 1;
+    int randcypher = rand() % 4 + 1;
 
     outfile<<to_string(randcypher);
 
@@ -151,6 +177,10 @@ void Huffman::EncodeTreeCaeser(string file)
 
 void Huffman::ReadTreeNormal(string file)
 {
+    /*
+     This function reads the frequencies from the compressed file and also gets the value of the padding
+     which is important when reading the last character
+     */
     chars = 0;
     int pqsize;
     string pqsizestring = "";
@@ -210,6 +240,11 @@ void Huffman::ReadTreeNormal(string file)
 
 void Huffman::ReadTreeCaeser(string file)
 {
+    /*
+     This function reads the frequencies from the compressed file and also gets the value of the padding
+     which is important when reading the last character, it also shifts back the characters to their correct
+     true value before caeser encryption
+     */
     chars = 0;
 
     // First, read the entire file to extract padding
@@ -224,7 +259,6 @@ void Huffman::ReadTreeCaeser(string file)
 
     infile1.close();
 
-    // Open the file again to process the content
     ifstream infile(file);
 
     // Read the cipher key
@@ -238,11 +272,9 @@ void Huffman::ReadTreeCaeser(string file)
         chars++;
         char wrongch = infile.get();
 
-        // Reverse the Caesar cipher transformation
-        char ch = (wrongch + cypherkey) % 256;
-
-        // Ensure the result stays within the ASCII range
-        if (ch < 0) ch += 256;
+        char ch = (wrongch + cypherkey) % 256; //this was the only way the true char is back after debugging
+        if (ch < 0)
+        {ch += 256;}
 
         string num = "";
         while (isdigit(infile.peek()))
@@ -264,23 +296,24 @@ void Huffman::ReadTreeCaeser(string file)
 }
 
 void Huffman::Compress(string type) {
-    Frequencies(fileName);
+
+    Frequencies(fileName); //constructs priority queue of frequencies
     if(type == "Caeser")
     {
-        EncodeTreeCaeser("Compressed.txt");
+        EncodeTreeCaeser("Compressed.txt"); //writes down the frequencies at top of file using caeser
     }
     else if(type == "Normal")
     {
-        EncodeTreeNormal("Compressed.txt");
+        EncodeTreeNormal("Compressed.txt"); //writes down the frequencies at top of file
     }
     else
     {
         cerr<<"You need to choose either caeser or normal encryption"<<endl;
     }
 
-    buildHuffmanTree();
+    buildHuffmanTree();// builds tree
 
-    CreateEncodings(root, "");
+    CreateEncodings(root, ""); //creating encodings map
 
 
     ifstream infile(fileName, ios::binary);
@@ -296,6 +329,10 @@ void Huffman::Compress(string type) {
 
     char ch;
     while (infile.get(ch)) {
+        /*
+         tHis part was particularly difficult and needed google and ai assistance
+         it is the only way to output individual bits not bytes, also used in decompression
+         */
         vector<bool> encoding = Encodings[ch];
 
         for (bool bit : encoding) {
@@ -309,13 +346,13 @@ void Huffman::Compress(string type) {
             }
         }
     }
-//the rest
+//if there remains couple bits to be added, we pad them and store that padding bc its important
     if (bitCount > 0) {
         padding = 8-bitCount;
         buffer = buffer << (8 - bitCount);
         outfile.put(buffer);
     }
-    outfile<<to_string(padding);
+    outfile<<to_string(padding); //store padding
 
 
     infile.close();
@@ -324,17 +361,17 @@ void Huffman::Compress(string type) {
 void Huffman::Decompress(string type) {
     if(type == "Caeser")
     {
-        ReadTreeCaeser(fileName);
+        ReadTreeCaeser(fileName); //read frequencies into priority queue after cyphering
     }
     else if(type == "Normal")
     {
-        ReadTreeNormal(fileName);
+        ReadTreeNormal(fileName); //read frequencies into priority queue
     }
     else
     {
         cerr<<"You need to choose either caeser or normal encryption"<<endl;
     }
-    buildHuffmanTree();
+    buildHuffmanTree(); //builds tree similar to compression
 
     ifstream infile(fileName, ios::binary);
     ofstream outfile("Decompressednewfile.txt");
@@ -357,6 +394,7 @@ void Huffman::Decompress(string type) {
 
     while (infile.get(reinterpret_cast<char&>(buffer))) {
         for (int i = 7; i >= 0; i--) {
+            //same methodology of bits
 
             bool bit = (buffer >> i) & 1;  //getting the ith bit
             if(bit)
@@ -379,7 +417,6 @@ void Huffman::Decompress(string type) {
                 infile.seekg(currentPosition -  static_cast<streamoff>(1));
                 if (lastchar && i < padding)
                 {
-
                     return;
                 }
                 else
